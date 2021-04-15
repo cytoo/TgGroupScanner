@@ -1,11 +1,14 @@
+import time
+
 from telethon import TelegramClient, events
 from telethon.errors.common import MultiError
 from config import *
-from sql import DB
+from asyncio import run
+from bot.mods.sql import DB
 
 database = DB()
 client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
-
+on_wait_users = {}
 pm_start = """
 Hello {}!, I'm {}
 I'm a bot made by @cytolytic that scans groups and stores the users inside of them.
@@ -21,6 +24,16 @@ use /support if you encounter any issues.
 use /donate if you'd like to donate to my owner.
 NOTE: this bot can be only used in pms for obvious reasons.
 """
+
+
+def timer(func):
+    async def wrapper(event, *args, **kwargs):
+        if event.sender_id not in on_wait_users.keys():
+            return await func(event, *args, **kwargs)
+        user_time = on_wait_users[event.sender_id]
+        if (user_time - time.time()) < 30*60:
+            return await event.reply(f"sorry but you can't use this bot for another {int((30 * 60 - int(time.time() - user_time)) / 60)} minute(s)")
+    return wrapper
 
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/start$"))
@@ -80,6 +93,7 @@ async def query_user(event):
 
 
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/scan (.*)"))
+@timer
 async def scan(event):
     if not event.is_private:
         return
@@ -95,6 +109,7 @@ async def scan(event):
     except ValueError:
         return await event.reply("the chat you sent doesn't seem to exist.")
     chat = await client.get_entity(look_for)
+    on_wait_users.update({event.sender_id: time.time()})
     try:
         async for user in data:
             await database.insert_user(
@@ -106,8 +121,3 @@ async def scan(event):
         await event.reply("sorry, but I can't scan that chat/channel ;-;")
         return
     await event.reply(f"{chat.id} has been scanned.")
-
-
-if __name__ == "__main__":
-    client.run_until_disconnected()
-    database.db.close()
