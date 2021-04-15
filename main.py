@@ -73,7 +73,7 @@ async def query_user(event):
                    f"total groups/channels found: {len(res)}\n\n"
     for _, _, chat in res:
         chat_data = await client.get_entity(int(chat))
-        return_text += f"~ {chat_data.title} | {chat_data.username}\n"
+        return_text += f"~ {chat_data.title} | {'@' + chat_data.username if chat_data.username else 'no username'}\n"
     return_text += "\ndata by @GroupScannerRobot\n"
     return_text += f"join @{(await client.get_entity(SUPPORT_GROUP)).username}"
     await event.reply(return_text)
