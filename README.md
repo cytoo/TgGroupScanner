@@ -1,6 +1,6 @@
 # TgGroupScanner
 
-<img alt="bot pic" src="https://raw.githubusercontent.com/cytoo/grpscan/main/assets/bot_pic.jpg?token=AQ644YSDW25IHIDPHLEYMCLAPCGEQ">
+<img alt="bot pic" src="https://github.com/cytoo/TgGroupScanner/blob/main/assets/bot_pic.jpg">
 
 ## about
 this bot uses the telethon library to scan groups
