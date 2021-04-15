@@ -87,6 +87,10 @@ async def scan(event):
     if not len(look_for) > 4:
         return await event.reply("that chat doesn't seem to exist! send me a chat's username or id.")
     try:
+        look_for = int(look_for)
+    except ValueError:
+        pass
+    try:
         data = client.iter_participants(look_for, aggressive=True)
     except ValueError:
         return await event.reply("the chat you sent doesn't seem to exist.")
@@ -96,7 +100,7 @@ async def scan(event):
             await database.insert_user(
                 user.id,
                 user.username if user.username else "null",
-                chat=chat.id
+                chat.id
             )
     except MultiError:
         await event.reply("sorry, but I can't scan that chat/channel ;-;")
@@ -106,3 +110,4 @@ async def scan(event):
 
 if __name__ == "__main__":
     client.run_until_disconnected()
+    database.db.close()
