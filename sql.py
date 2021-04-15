@@ -7,6 +7,9 @@ class DB:
         self.db = connect("app.db")
         self.cr = self.db.cursor()
         self.cr.execute("create table if not exists `users`(user_id INTEGER, username TEXT, chat TEXT)")
+        
+    def __del__(self):
+        self.db.close()
 
     async def get_user(
             self, user_id=None, username=None
