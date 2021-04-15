@@ -23,16 +23,6 @@ NOTE: this bot can be only used in pms for obvious reasons.
 """
 
 
-def is_private(func):
-    def wrapper(
-            event, *args, **kwargs
-    ):
-        if not event.is_private:
-            return
-        return func(event, *args, **kwargs)
-    return wrapper
-
-
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/start$"))
 async def start(event):
     await event.reply(pm_start.format(event.sender.first_name, "@GroupScannerRobot"))
@@ -60,9 +50,10 @@ async def source(event):
     await event.reply(f"you can donate to my owner [here](https://paypal.me/cytolytic)", link_preview=False)
 
 
-@is_private
 @client.on(events.NewMessage(incoming=True))
 async def query_user(event):
+    if not event.is_private:
+        return
     if not event.text or event.text.startswith("/"):
         return
     try:
@@ -83,20 +74,21 @@ async def query_user(event):
     for _, _, chat in res:
         chat_data = await client.get_entity(int(chat))
         return_text += f"~ {chat_data.title} | {chat_data.username}\n"
-    return_text += "\ndata by @GroupScannerRobot"
-    return_text += f"join {(await client.get_entity(SUPPORT_GROUP)).id}"
+    return_text += "\ndata by @GroupScannerRobot\n"
+    return_text += f"join @{(await client.get_entity(SUPPORT_GROUP)).username}"
     await event.reply(return_text)
 
 
-@is_private
 @client.on(events.NewMessage(incoming=True, pattern=r"^\/scan (.*)"))
 async def scan(event):
+    if not event.is_private:
+        return
     look_for = event.pattern_match.group(1)
     if not len(look_for) > 4:
         return await event.reply("that chat doesn't seem to exist! send me a chat's username or id.")
     try:
-        data = client.iter_participants(event.pattern_match.group(1), aggressive=True)
-    except ValueError as e:
+        data = client.iter_participants(look_for, aggressive=True)
+    except ValueError:
         return await event.reply("the chat you sent doesn't seem to exist.")
     chat = await client.get_entity(look_for)
     try:
