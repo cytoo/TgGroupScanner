@@ -63,7 +63,7 @@ async def source(event):
 @is_private
 @client.on(events.NewMessage(incoming=True))
 async def query_user(event):
-    if event.text.startswith("/"):
+    if not event.text or event.text.startswith("/"):
         return
     try:
         data = await client.get_entity(event.text)
