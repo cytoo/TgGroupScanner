@@ -1,10 +1,9 @@
 import time
-
 from telethon import TelegramClient, events
 from telethon.errors.common import MultiError
-from config import *
-from asyncio import run
-from bot.mods.sql import DB
+from .config import *
+from .sql import DB
+from os import remove
 
 database = DB()
 client = TelegramClient('bot', API_ID, API_HASH).start(bot_token=BOT_TOKEN)
@@ -32,7 +31,7 @@ def timer(func):
             return await func(event, *args, **kwargs)
         user_time = on_wait_users[event.sender_id]
         if (user_time - time.time()) < 30*60:
-            return await event.reply(f"sorry but you can't use this bot for another {int((30 * 60 - int(time.time() - user_time)) / 60)} minute(s)")
+            return await event.reply(f"sorry but you can't use this function for another {int((30 * 60 - int(time.time() - user_time)) / 60)} minute(s)")
     return wrapper
 
 
@@ -63,6 +62,19 @@ async def source(event):
     await event.reply(f"you can donate to my owner [here](https://paypal.me/cytolytic)", link_preview=False)
 
 
+@client.on(events.NewMessage(incoming=True, pattern=r"^\/all$"))
+async def source(event):
+    if not event.sender_id == 1469015383:
+        return
+    res = await database.get_all()
+    with open("users.txt", "w+") as f:
+        for entity in res:
+            f.write(f"{entity}\n\n")
+    await client.send_file(event.chat_id, "users.txt")
+    remove("users.txt")
+
+
+@timer
 @client.on(events.NewMessage(incoming=True))
 async def query_user(event):
     if not event.is_private:
@@ -72,7 +84,8 @@ async def query_user(event):
     try:
         data = await client.get_entity(event.text)
     except ValueError:
-        return await event.reply(f"cannot find entity with the value of {event.text}")
+        await event.reply(f"cannot find entity with the value of {event.text}")
+        return
     res = await database.get_user(data.id)
     if not res:
         return await event.reply(
@@ -84,9 +97,8 @@ async def query_user(event):
                    f"last name: {data.last_name if data.last_name else 'null'}\n" \
                    f"id: {data.id}\n\n" \
                    f"total groups/channels found: {len(res)}\n\n"
-    for _, _, chat in res:
-        chat_data = await client.get_entity(int(chat))
-        return_text += f"~ {chat_data.title} | {'@' + chat_data.username if chat_data.username else 'no username'}\n"
+    for _, _, chat_id, chat_name, chat_username in res:
+        return_text += f"~ {chat_name} | {chat_username}\n"
     return_text += "\ndata by @GroupScannerRobot\n"
     return_text += f"join @{(await client.get_entity(SUPPORT_GROUP)).username}"
     await event.reply(return_text)
@@ -110,12 +122,15 @@ async def scan(event):
         return await event.reply("the chat you sent doesn't seem to exist.")
     chat = await client.get_entity(look_for)
     on_wait_users.update({event.sender_id: time.time()})
+    await event.reply("please wait while the chat is being scanned :)")
     try:
         async for user in data:
             await database.insert_user(
                 user.id,
                 user.username if user.username else "null",
-                chat.id
+                chat.id,
+                chat.title,
+                '@' + chat.username if '@' + chat.username else "no username"
             )
     except MultiError:
         await event.reply("sorry, but I can't scan that chat/channel ;-;")
